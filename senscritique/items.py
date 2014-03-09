@@ -1,7 +1,8 @@
 from scrapy.item import Item, Field
 
 class UserItem(Item):
-    name = Field()
+    uri = Field()
     uid = Field()
     age = Field()
     gender = Field()
+    postcode = Field()
