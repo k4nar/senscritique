@@ -8,8 +8,12 @@
 
 BOT_NAME = 'senscritique'
 
-SPIDER_MODULES = ['senscritique.spiders']
-NEWSPIDER_MODULE = 'senscritique.spiders'
+SPIDER_MODULES = ['scraper.spiders']
+NEWSPIDER_MODULE = 'scraper.spiders'
+
+ITEM_PIPELINES = {
+    'scraper.pipelines.MySQLPipeline': 800,
+}
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'senscritique (+http://www.yourdomain.com)'

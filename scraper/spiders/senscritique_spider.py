@@ -6,7 +6,7 @@ from scrapy.spider import Spider
 from scrapy.http import Request, FormRequest
 from scrapy.selector import Selector
 
-from senscritique.items import UserItem
+from scraper.items import UserItem
 
 
 class SenscritiqueSpider(Spider):
