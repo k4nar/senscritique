@@ -1,20 +1,22 @@
-from pewee import MySQLDatabase, Model, CharField, ForeignKeyField, IntegerField, BooleanField
+from peewee import MySQLDatabase, Model, CharField, ForeignKeyField, IntegerField, BooleanField
+
+mysql = MySQLDatabase('senscritique', user='root', passwd='root')
 
 class BaseModel(Model):
     class Meta:
-        database = database
+        database = mysql
 
 class User(BaseModel):
-    uid = IntegerField(index=True, unique=True)
-    uri = CharField(unique=True, max_length=16)
+    uid = IntegerField(primary_key=True)
+    uri = CharField(unique=True)
     age = IntegerField()
-    gender = CharField(max_length=1)
+    gender = CharField()
     postcode = IntegerField()
 
 class Product(BaseModel):
-    pid = IntegerField(index=True, unique=True)
-    uri = CharField(unique=True, max_length=64)
-    category = CharField(max_length=1)
+    pid = IntegerField(primary_key=True)
+    uri = CharField(unique=True)
+    category = CharField()
     name = CharField()
 
 class Rate(BaseModel):
@@ -22,3 +24,9 @@ class Rate(BaseModel):
     pid = ForeignKeyField(Product)
     rate = IntegerField()
     recommended = BooleanField()
+
+
+def init():
+    mysql.connect()
+    for model in [User, Product, Rate]:
+        model.create_table(fail_silently=True)
