@@ -19,14 +19,14 @@ class Product(BaseModel):
     category = CharField()
     name = CharField()
 
-class Rate(BaseModel):
+class Rating(BaseModel):
     uid = ForeignKeyField(User)
     pid = ForeignKeyField(Product)
-    rate = IntegerField()
+    score = IntegerField()
     recommended = BooleanField()
 
 
 def init():
     mysql.connect()
-    for model in [User, Product, Rate]:
+    for model in [User, Product, Rating]:
         model.create_table(fail_silently=True)
