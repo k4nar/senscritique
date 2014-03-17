@@ -12,23 +12,28 @@ from scraper.items import UserItem, ProductItem, RatingItem
 class SenscritiqueSpider(Spider):
     name = "senscritique"
     allowed_domains = ["senscritique.com"]
-    start_urls = ['http://www.senscritique.com/LeYéti']
+    start_urls = ['http://www.senscritique.com/Gamekult']
 
     def __init__(self, *args, **kwargs):
         super(SenscritiqueSpider, self).__init__(*args, **kwargs)
         self.products = set()
 
     def parse(self, response):
-        sel = Selector(response)
-        uid = int(sel.xpath('//div[@class="uco-cover-controls"]/div/@data-sc-user-id').extract()[0])
         uri = response.url.split("/")[-1]
 
-        info = sel.xpath('//div[@class="d-cover-subtitle"]/text()').extract()[0].encode('utf-8')
+        if not uri:
+            return
+
+        sel = Selector(response)
+        uid = sel.xpath('//div[@class="uco-cover-controls"]/div/@data-sc-user-id').extract()[0]
 
         user = UserItem()
-        user['uid'] = uid
+        user['uid'] = int(uid)
         user['uri'] = uri
+
+        info = sel.xpath('//div[@class="d-cover-subtitle"]/text()').extract()
         if info:
+            info = info[0].encode('utf-8')
             gender = info.split(',')[0].strip()
             if gender:
                 user['gender'] = 'm' if gender == 'Homme' else 'f'
@@ -38,6 +43,7 @@ class SenscritiqueSpider(Spider):
             postcode = re.search(r"\((\d{5})\)", info)
             if postcode:
                 user['postcode'] = postcode.groups()[0]
+
         yield user
 
         yield Request(
@@ -105,7 +111,7 @@ class SenscritiqueSpider(Spider):
             node = item.xpath('div/div[@class="erra user"]/a/div')
             rating = RatingItem()
             rating['pid'] = pid
-            rating['uid'] = uid
+            rating['uid'] = int(uid)
             rating['score'] = int(node.xpath('span/text()').extract()[0].encode('utf-8'))
             rating['recommended'] = bool(node.xpath('span/span[contains(@class, "eins-recommend")]'))
             yield rating
