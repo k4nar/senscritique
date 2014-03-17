@@ -15,5 +15,7 @@ ITEM_PIPELINES = {
     'scraper.pipelines.MySQLPipeline': 800,
 }
 
+LOG_LEVEL = 'INFO'
+
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'senscritique (+http://www.yourdomain.com)'
