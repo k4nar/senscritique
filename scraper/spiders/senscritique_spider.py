@@ -76,10 +76,12 @@ class SenscritiqueSpider(Spider):
                 )
 
         for contact in sel.xpath('//li[@class="esli-item"]/a/@href').extract():
-            yield Request(
-                url="http://senscritique.com" + contact.encode('utf-8'),
-                callback=self.parse
-            )
+            url = "http://senscritique.com" + contact.encode('utf-8')
+            if not url in self.start_urls:
+                yield Request(
+                    url=url,
+                    callback=self.parse
+                )
 
     def parse_collection(self, response):
         uid = response.meta['uid']
