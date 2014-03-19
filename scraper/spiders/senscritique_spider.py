@@ -12,7 +12,7 @@ from scraper.items import UserItem, ProductItem, RatingItem
 class SenscritiqueSpider(Spider):
     name = "senscritique"
     allowed_domains = ["senscritique.com"]
-    start_urls = ['http://www.senscritique.com/Gamekult']
+    start_urls = ['http://www.senscritique.com/k4nar']
 
     def __init__(self, *args, **kwargs):
         super(SenscritiqueSpider, self).__init__(*args, **kwargs)

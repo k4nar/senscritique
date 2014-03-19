@@ -8,14 +8,14 @@ class BaseModel(Model):
 
 class User(BaseModel):
     uid = IntegerField(primary_key=True)
-    uri = CharField(unique=True)
+    uri = CharField()
     age = IntegerField()
     gender = CharField()
     postcode = IntegerField()
 
 class Product(BaseModel):
     pid = IntegerField(primary_key=True)
-    uri = CharField(unique=True)
+    uri = CharField()
     category = CharField()
     name = CharField()
 
@@ -30,3 +30,4 @@ def init():
     mysql.connect()
     for model in [User, Product, Rating]:
         model.create_table(fail_silently=True)
+
