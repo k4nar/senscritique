@@ -9,9 +9,9 @@ class BaseModel(Model):
 class User(BaseModel):
     uid = IntegerField(primary_key=True)
     uri = CharField()
-    age = IntegerField()
-    gender = CharField()
-    postcode = IntegerField()
+    age = IntegerField(null=True)
+    gender = CharField(null=True)
+    postcode = IntegerField(null=True)
 
 class Product(BaseModel):
     pid = IntegerField(primary_key=True)
