@@ -1,44 +1,41 @@
+from collections import deque, OrderedDict
+
 import miner.db
 from items import UserItem, ProductItem, RatingItem
 
-class Batch(object):
-    def __init__(self, model, batch_size=10):
-        self.model = model
-        self.batch_size = batch_size
-        self.batch = [None] * self.batch_size
-        self.current = 0
-
-    def add_item(self, item):
-        self.batch[self.current] = item
-
-        self.current += 1
-        if self.current == self.batch_size:
-            self.commit()
-
-    def commit(self):
-        if self.current == 0:
-            return
-
-        with miner.db.mysql.transaction():
-            self.model.insert_many(self.batch[:self.current]).execute()
-
-        self.current = 0
-
 
 class MySQLPipeline(object):
+    MODELS = OrderedDict((
+        (UserItem, miner.db.User),
+        (ProductItem, miner.db.Product),
+        (RatingItem, miner.db.Rating),
+    ))
+
+    BATCH_SIZE = 10000
+
     def __init__(self):
         miner.db.init()
 
-        self.batches = {
-            UserItem: Batch(miner.db.User),
-            ProductItem: Batch(miner.db.Product),
-            RatingItem: Batch(miner.db.Rating),
-        }
+        self.current = 0
+        self.batches = OrderedDict((k, deque()) for k in self.MODELS.keys())
 
     def process_item(self, item, spider):
         batch = self.batches[item.__class__]
-        batch.add_item(item)
+        batch.append(item)
+
+        self.current += 1
+        if self.current == self.BATCH_SIZE:
+            self.commit()
 
     def close_spider(self, spider):
-        for batch in self.batches.values():
-            batch.commit()
+        self.commit()
+
+    def commit(self):
+        for klass, batch in self.batches.items():
+            if len(batch) > 0:
+                model = self.MODELS[klass]
+                with miner.db.mysql.transaction():
+                    model.insert_many(batch).execute()
+                batch.clear()
+
+        self.current = 0
