@@ -12,11 +12,15 @@ from scraper.items import UserItem, ProductItem, RatingItem
 class SenscritiqueSpider(Spider):
     name = "senscritique"
     allowed_domains = ["senscritique.com"]
-    start_urls = ['http://www.senscritique.com/k4nar']
+    base_url = "http://www.senscritique.com/"
+    start_urls = [base_url + "LeYéti"]
 
     def __init__(self, *args, **kwargs):
         super(SenscritiqueSpider, self).__init__(*args, **kwargs)
         self.products = set()
+
+    def url(self, part, *args, **kwargs):
+        return self.base_url + part.format(*args, **kwargs)
 
     def parse(self, response):
         uri = response.url.split("/")[-1]
@@ -47,14 +51,14 @@ class SenscritiqueSpider(Spider):
         yield user
 
         yield Request(
-            url="http://www.senscritique.com/sc/{}/collection/rating/page-1.ajax".format(uri),
+            url=self.url("sc/{}/collection/rating/page-1.ajax", uri),
             headers={'X-Requested-With': 'XMLHttpRequest'},
             meta={'uid': uid, 'uri': uri},
             callback=self.parse_collection,
         )
 
         yield FormRequest(
-            url="http://www.senscritique.com/sc/scouts/index/index.ajax",
+            url=self.url("sc/scouts/index/index.ajax"),
             formdata={'user-id': str(uid), 'filter': 'tous'},
             headers={'X-Requested-With': 'XMLHttpRequest'},
             meta={'uid': uid},
@@ -68,7 +72,7 @@ class SenscritiqueSpider(Spider):
         if "index.ajax" in response.url:
             for page in xrange(2, self._get_nb_pages(sel) + 1):
                 yield FormRequest(
-                    url="http://www.senscritique.com/sc/scouts/page-{}.ajax".format(page),
+                    url=self.url("sc/scouts/page-{}.ajax", page),
                     formdata={'user-id': uid, 'filter': 'tous'},
                     headers={'X-Requested-With': 'XMLHttpRequest'},
                     meta=response.meta,
@@ -76,7 +80,7 @@ class SenscritiqueSpider(Spider):
                 )
 
         for contact in sel.xpath('//li[@class="esli-item"]/a/@href').extract():
-            url = "http://senscritique.com" + contact.encode('utf-8')
+            url = self.url(contact.encode('utf-8').split("/")[-1])
             if not url in self.start_urls:
                 yield Request(
                     url=url,
@@ -91,7 +95,7 @@ class SenscritiqueSpider(Spider):
         if "page-1.ajax" in response.url:
             for page in xrange(2, self._get_nb_pages(sel) + 1):
                 yield Request(
-                    url="http://www.senscritique.com/sc/{}/collection/rating/page-{}.ajax".format(uri, page),
+                    url=self.url("/sc/{}/collection/rating/page-{}.ajax", uri, page),
                     headers={'X-Requested-With': 'XMLHttpRequest'},
                     meta=response.meta,
                     callback=self.parse_collection,
