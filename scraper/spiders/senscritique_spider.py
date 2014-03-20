@@ -29,7 +29,9 @@ class SenscritiqueSpider(Spider):
             return
 
         sel = Selector(response)
-        uid = sel.xpath('//div[@class="uco-cover-controls"]/div/@data-sc-user-id').extract()[0]
+        uid = sel.xpath(
+            '//div[@class="uco-cover-controls"]/div/@data-sc-user-id'
+        ).extract()[0]
 
         user = UserItem()
         user['uid'] = int(uid)
@@ -95,33 +97,46 @@ class SenscritiqueSpider(Spider):
         if "page-1.ajax" in response.url:
             for page in xrange(2, self._get_nb_pages(sel) + 1):
                 yield Request(
-                    url=self.url("/sc/{}/collection/rating/page-{}.ajax", uri, page),
+                    url=self.url(
+                        "/sc/{}/collection/rating/page-{}.ajax", uri, page
+                    ),
                     headers={'X-Requested-With': 'XMLHttpRequest'},
                     meta=response.meta,
                     callback=self.parse_collection,
                 )
 
         for item in sel.xpath('//li[@class="elco-collection-item"]'):
-            pid = int(item.xpath('figure/@data-sc-product-id').extract()[0].encode('utf-8'))
+            pid = int(item.xpath(
+                'figure/@data-sc-product-id'
+            ).extract()[0].encode('utf-8'))
+
             if not pid in self.products:
                 self.products.add(pid)
                 product = ProductItem()
                 product['pid'] = pid
                 title = item.xpath('div/h2/a[@class="elco-anchor"]')
-                url = title.xpath("@href").extract()[0].encode('utf-8').split('/')
+                url = title.xpath("@href").extract()[0].encode('utf-8')\
+                           .split('/')
                 product['category'] = url[1]
                 product['uri'] = url[-2]
-                product['name'] = title.xpath("text()").extract()[0].encode('utf-8')
+                product['name'] = title.xpath("text()").extract()[0]\
+                                       .encode('utf-8')
                 yield product
 
             node = item.xpath('div/div[@class="erra user"]/a/div')
             rating = RatingItem()
             rating['pid'] = pid
             rating['uid'] = int(uid)
-            rating['score'] = int(node.xpath('span/text()').extract()[0].encode('utf-8'))
-            rating['recommended'] = bool(node.xpath('span/span[contains(@class, "eins-recommend")]'))
+            rating['score'] = int(
+                node.xpath('span/text()').extract()[0].encode('utf-8')
+            )
+            rating['recommended'] = bool(
+                node.xpath('span/span[contains(@class, "eins-recommend")]')
+            )
             yield rating
 
     def _get_nb_pages(self, sel):
-        nb_pages = sel.xpath('//ul[@class="eipa-pages"][1]/li[last()]/a/@data-sc-pager-page').extract()
+        nb_pages = sel.xpath(
+            '//ul[@class="eipa-pages"][1]/li[last()]/a/@data-sc-pager-page'
+        ).extract()
         return int(nb_pages[0]) if nb_pages else 1

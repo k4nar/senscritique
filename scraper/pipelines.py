@@ -3,6 +3,7 @@ from collections import deque, OrderedDict
 import miner.db
 from items import UserItem, ProductItem, RatingItem
 
+
 class Batch(object):
     MODELS = OrderedDict((
         (UserItem, miner.db.User),
