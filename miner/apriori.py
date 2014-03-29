@@ -1,6 +1,7 @@
 import os
 import cPickle as pickle
 
+from multiprocessing import Pool
 from itertools import chain, count, combinations
 from collections import Counter
 
@@ -31,21 +32,16 @@ l1 = set(item for item, freq in support.items() if freq >= minfreq)
 print len(l1)
 
 print "before", len(transactions)
-for t in transactions:
-    if len(t & l1) < 2:
-        transactions.remove(t)
+transactions = filter(lambda t: len(t) >= 2, (t & l1 for t in transactions))
 print "after", len(transactions)
 
 prev_l = set(frozenset((item,)) for item in l1)
-result = prev_l
+result = set()
 
 for k in count(2):
-    candidates = set(frozenset(e) for e in (a | b for a in prev_l for b in prev_l) if len(e) == k)
-    print "a", len(candidates)
-    candidates = set(c for c in candidates if all(set(subset) in prev_l for subset in combinations(c, k - 1)))
-    print "b", len(candidates)
+    candidates = (frozenset(e) for e in (a | b for a in prev_l for b in prev_l) if len(e) == k)
+    candidates = (c for c in set(candidates) if all(set(subset) in prev_l for subset in combinations(c, k - 1)))
 
-    from multiprocessing import Pool
     pool = Pool()
     l = set(pool.map(lambda c: c if sum(c <= t for t in transactions) >= minfreq else None, candidates))
     l.discard(None)
