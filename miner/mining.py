@@ -56,10 +56,15 @@ for panel_name, panel in panels.items():
 
         rules = apriori(transactions, minsup, minconf, "results/" + name + ".freq")
 
-        output = []
+        rules_export = []
         for rule, (conf, lift, leverage) in rules.items():
             l, r = ([Product.get(Product.pid == pid).name for pid in items] for items in rule)
-            output.append({'l': l, 'r': r, 'conf': conf, 'lift': lift, 'leverage': leverage})
+            rules_export.append({'l': l, 'r': r, 'conf': conf, 'lift': lift, 'leverage': leverage})
 
-        with open(name + ".json", 'w+') as f:
+        with open("results/" + name + ".json", 'w+') as f:
+            output = {
+                'minconf': minconf,
+                'minsup': minsup,
+                'rules': rules_export
+            }
             json.dump(output, f, indent=2)
