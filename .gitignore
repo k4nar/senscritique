@@ -41,3 +41,5 @@ nosetests.xml
 # Vim
 *.swp
 .ropeproject
+
+results
