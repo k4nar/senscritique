@@ -1,94 +1,62 @@
 import os
-import cPickle as pickle
 import json
+import cPickle as pickle
 
 from itertools import chain, count, combinations
 from collections import Counter
 
-from .db import User, Rating, Product, init
 
-init()
+def apriori(transactions, minsup, minconf, freq_file=None):
+    nb_transactions = float(len(transactions))
 
-minsup = 0.33
-minconf = 0.8
+    if freq_file and os.path.exists(freq_file):
+        with open(freq_file) as f:
+            frequencies = pickle.load(f)
+    else:
+        counter = Counter(chain(*transactions))
+        l1 = set(item for item, freq in counter.items() if freq / nb_transactions >= minsup)
 
-if os.path.exists('transactions'):
-    with open('transactions') as f:
-        transactions = pickle.load(f)
-else:
-    transactions = filter(None, (
-        frozenset(t[0] for t in user.rating_set.select(Rating.pid).join(Product).where(Rating.recommended and Product.category == 'film').tuples())
-        for user in User.select()
-    ))
+        transactions = [t & l1 for t in transactions]
 
-    with open('transactions', 'w+') as f:
-        pickle.dump(transactions, f, pickle.HIGHEST_PROTOCOL)
+        frequencies = {frozenset((item,)): counter[item] for item in l1}
+        prev_l = frequencies.keys()
 
-if os.path.exists('associations'):
-    with open('associations') as f:
-        result = pickle.load(f)
-else:
-    counter = Counter(chain(*transactions))
-    minfreq = minsup * len(transactions)
-    print minfreq
-    l1 = set(item for item, freq in counter.items() if freq >= minfreq)
-    print 1, len(l1)
+        for k in count(2):
+            transactions = filter(lambda t: len(t) >= k, transactions)
 
-    print "before", len(transactions)
-    transactions = filter(lambda t: len(t) >= 2, (t & l1 for t in transactions))
-    print "after", len(transactions)
+            candidates = (frozenset(e) for e in (a | b for a in prev_l for b in prev_l) if len(e) == k)
+            candidates = (c for c in set(candidates) if all(set(subset) in prev_l for subset in combinations(c, k - 1)))
 
-    result = {frozenset((item,)): counter[item] for item in l1}
-    prev_l = result.keys()
+            l = set()
+            for c in candidates:
+                freq = sum(1 for t in transactions if c <= t)
+                if freq / nb_transactions >= minsup:
+                    l.add(c)
+                    frequencies[c] = freq
 
-    for k in count(2):
-        print "candidates"
-        candidates = (frozenset(e) for e in (a | b for a in prev_l for b in prev_l) if len(e) == k)
-        candidates = (c for c in set(candidates) if all(set(subset) in prev_l for subset in combinations(c, k - 1)))
-        print "done"
+            if not l:
+                break
 
-        l = set()
-        for c in candidates:
-            freq = sum(1 for t in transactions if c <= t)
-            if freq >= minfreq:
-                l.add(c)
-                result[c] = freq
+            prev_l = l
 
-        print k, len(l)
+        if freq_file:
+            with open(freq_file, 'w+') as f:
+                pickle.dump(frequencies, f, pickle.HIGHEST_PROTOCOL)
 
-        if not l:
-            break
+    rules = {}
+    for items, freq in frequencies.items():
+        if len(items) < 2:
+            continue
 
-        prev_l = l
+        support = frequencies[items] / nb_transactions
+        candidates = set(frozenset(r) for k in range(1, len(items)) for r in combinations(items, k))
 
-    with open('associations', 'w+') as f:
-        pickle.dump(result, f, pickle.HIGHEST_PROTOCOL)
+        for r in candidates:
+            l = items - r
+            conf = float(freq) / frequencies[l]
+            if conf >= minconf:
+                lift = conf * (nb_transactions / frequencies[r])
+                leverage = support - (frequencies[l] * frequencies[r]) / (nb_transactions ** 2)
+                rules[(l, r)] = (conf, lift, leverage)
 
-rules = list()
-for items, freq in result.items():
-    if len(items) < 2:
-        continue
-
-    candidates = (frozenset(r) for k in range(1, len(items)) for r in combinations(items, k))
-    confidant = set((items - r, r) for r in candidates if float(freq) / result[items - r] >= minconf)
-
-    if not confidant:
-        break
-
-    rules += confidant
-
-print len(rules)
-
-output = []
-nb_transactions = float(len(transactions))
-for l, r in rules:
-    conf = float(result[l | r]) / result[l]
-    lift = conf * (nb_transactions / result[r])
-    leverage = (result[l | r] / nb_transactions) - (result[l] / nb_transactions) * (result[r] / nb_transactions)
-
-    l, r = ([Product.get(Product.pid == pid).name for pid in items] for items in (l, r))
-
-    output.append({'l': l, 'r': r, 'conf': conf, 'lift': lift, 'leverage': leverage})
-
-with open("toto.json", 'w+') as f:
-    json.dump(output, f, indent=2)
+    return rules
