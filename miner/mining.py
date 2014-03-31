@@ -19,8 +19,8 @@ from .apriori import apriori
 #     with open('transactions', 'w+') as f:
 #         pickle.dump(transactions, f, pickle.HIGHEST_PROTOCOL)
 
-minsup = 0.33
-minconf = 0.8
+minsup = 0.2
+minconf = 0.75
 
 classes = {
     "all": User.select(),
