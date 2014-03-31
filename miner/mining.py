@@ -45,8 +45,9 @@ def get_targets():
 
     return targets
 
+init()
 for class_name, users in classes.items():
-    #users = users.execute()
+    users = users.execute()
 
     for target, criteria in get_targets().items():
         name = class_name + "_" + target
@@ -54,7 +55,7 @@ for class_name, users in classes.items():
         print name
 
         transactions = filter(None, (
-            set(t[0] for t in user.rating_set.select(Rating.pid).join(Product).where(critera).tuples())
+            set(t[0] for t in user.rating_set.select(Rating.pid).join(Product).where(criteria).tuples())
             for user in users
         ))
 
