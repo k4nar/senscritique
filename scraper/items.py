@@ -5,6 +5,7 @@ class BaseItem(Item):
     def __init__(self, *args, **kwargs):
         super(Item, self).__init__(*args, **kwargs)
 
+        # Ensure that every field has a default None value
         for field in self.fields.keys():
             self.setdefault(field, None)
 

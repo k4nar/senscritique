@@ -32,6 +32,9 @@ class Rating(BaseModel):
 
 
 def init():
+    """
+    Connect to the database, and create the tables if necessary
+    """
     mysql.connect()
     for model in [User, Product, Rating]:
         model.create_table(fail_silently=True)
