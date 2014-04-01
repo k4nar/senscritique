@@ -1,5 +1,4 @@
 import os
-import json
 import cPickle as pickle
 
 from itertools import chain, count, combinations
@@ -47,8 +46,8 @@ def apriori(transactions, minsup, minconf, freq_file=None):
             # This is a generator, each value will be calculated when needed
             candidates = (frozenset(e) for e in (a | b for a in prev_l for b in prev_l) if len(e) == k)
             candidates = (
-                c for c in set(candidates) if all(set(subset) in prev_l
-                for subset in combinations(c, k - 1))
+                c for c in set(candidates)
+                if all(set(subset) in prev_l for subset in combinations(c, k - 1))
             )
 
             # We filter the candidates in order to get the supported itemsets
