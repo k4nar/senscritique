@@ -5,66 +5,69 @@ import cPickle as pickle
 from .db import User, Rating, Product, init
 from .apriori import apriori
 
-minsup = 0.2
-minconf = 0.75
+minsup = 0.1
+minconf = 0.8
 
 panels = {
     "all": None,
     "men": User.gender == 'm',
-    "men_20-30": User.gender == 'm' and User.age.between(20, 30),
-    "men_30-80": User.gender == 'm' and User.age.between(30, 80),
     "women": User.gender == 'f',
-    "women_20-30": User.gender == 'f' and User.age.between(20, 30),
-    "women_30-80": User.gender == 'f' and User.age.between(30, 80),
+    "oldest": User.age > 25,
+    "youngest": User.age <= 25,
+}
+
+criterias = {
+    'recommended': Rating.recommended,
+    'disliked': Rating.score < 3
 }
 
 
-def get_targets():
-    t = {
-        "recommended": Rating.recommended,
-        "liked": Rating.score > 8,
-        "disliked": Rating.score < 3
-    }
+def generate(e):
+    init()
 
-    for category in ['film', 'jeuvideo', 'serie']:
-        for name in ['recommended', 'liked', 'disliked']:
-            t[name + "_" + category] = t[name] and Product.category == category
+    panel_name, panel = e
 
-    return t
+    for category in ['film', 'jeuvideo']:
+        for critera_name, critera in criterias:
+            name = panel_name + "_" + category + "_" + critera_nam
 
-init()
-for panel_name, panel in panels.items():
-    users = User.select().where(panel)
+            print name
 
-    for target, criteria in get_targets().items():
-        name = panel_name + "_" + target
+            trans_file = "results/" + name + ".trans"
+            if os.path.exists(trans_file):
+                with open(trans_file) as f:
+                    transactions = pickle.load(f)
+            else:
+                transactions = filter(None, (
+                    set(
+                        t[0] for t in (user.rating_set
+                                           .select(Rating.pid)
+                                           .where(criteria)
+                                           .join(Product)
+                                           .where(Product.category == category)
+                                           .tuples())
+                    )
+                    for user in User.select().where(panel)
+                ))
 
-        print name
+                with open(trans_file, 'w+') as f:
+                    pickle.dump(transactions, f, pickle.HIGHEST_PROTOCOL)
 
-        trans_file = "results/" + name + ".trans"
-        if os.path.exists(trans_file):
-            with open(trans_file) as f:
-                transactions = pickle.load(f)
-        else:
-            transactions = filter(None, (
-                set(t[0] for t in user.rating_set.select(Rating.pid).join(Product).where(criteria).tuples())
-                for user in users
-            ))
+            rules = apriori(transactions, minsup, minconf, "results/" + name + ".freq")
 
-            with open(trans_file, 'w+') as f:
-                pickle.dump(transactions, f, pickle.HIGHEST_PROTOCOL)
+            rules_export = []
+            for rule, (conf, lift, leverage) in rules.items():
+                l, r = ([Product.get(Product.pid == pid).name for pid in items] for items in rule)
+                rules_export.append({'l': l, 'r': r, 'conf': conf, 'lift': lift, 'leverage': leverage})
 
-        rules = apriori(transactions, minsup, minconf, "results/" + name + ".freq")
+            with open("results/" + name + ".json", 'w+') as f:
+                output = {
+                    'minconf': minconf,
+                    'minsup': minsup,
+                    'rules': rules_export
+                }
+                json.dump(output, f, indent=2)
 
-        rules_export = []
-        for rule, (conf, lift, leverage) in rules.items():
-            l, r = ([Product.get(Product.pid == pid).name for pid in items] for items in rule)
-            rules_export.append({'l': l, 'r': r, 'conf': conf, 'lift': lift, 'leverage': leverage})
-
-        with open("results/" + name + ".json", 'w+') as f:
-            output = {
-                'minconf': minconf,
-                'minsup': minsup,
-                'rules': rules_export
-            }
-            json.dump(output, f, indent=2)
+from multiprocessing import Pool
+pool = Pool()
+pool.map(generate, panels.items())
